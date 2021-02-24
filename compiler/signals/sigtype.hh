@@ -94,12 +94,23 @@ class AudioType : public virtual Garbageable {
     int fBoolean;        ///< when a signal stands for a boolean value
 
     interval fInterval;  ///< Minimal and maximal values the signal can take
-    res   fRes;       ///< Resolution (fixed-point)
+    uint     minAge;     ///< number of times the min of the interval has been changed
+    uint     maxAge;     ///< number of times the max of the interval has been changed
+    res      fRes;       ///< Resolution (fixed-point)
     Tree     fCode;      ///< Tree representation (for memoization purposes)
 
    public:
-    AudioType(int n, int v, int c, int vec = kVect, int b = kNum, interval i = interval(), res r = res())
-        : fNature(n), fVariability(v), fComputability(c), fVectorability(vec), fBoolean(b), fInterval(i), fRes(r), fCode(0)
+    AudioType(int n, int v, int c, int vec = kVect, int b = kNum, interval i = interval(), uint minA=0, uint maxA=0, res r = res())
+        : fNature(n),
+          fVariability(v),
+          fComputability(c),
+          fVectorability(vec),
+          fBoolean(b),
+          fInterval(i),
+          minAge(minA),
+          maxAge(maxA),
+          fRes(r),
+          fCode(0)
     {
     }                        ///< constructs an abstract audio type
     virtual ~AudioType() {}  ///< not really useful here, but make compiler happier
@@ -116,8 +127,12 @@ class AudioType : public virtual Garbageable {
     int vectorability() const { return fVectorability; }  ///< returns when a signal can be vectorized
     int boolean() const { return fBoolean; }              ///< returns when a signal stands for a boolean value
 
-    interval getInterval() const { return fInterval; }  ///< returns the interval (min dn max values) of a signal
-    res getRes() const { return fRes; } ///< return the resolution of the signal (fixed)
+    interval getInterval() const { return fInterval; }  ///< returns the interval (min and max values) of a signal
+    uint     getMinAge() const { return minAge; }
+    uint     getMaxAge() const { return maxAge; }
+    void     incrMinAge() { this->minAge++; cerr << "incr min age : " << minAge << endl;}
+    void     incrMaxAge() { this->maxAge++; cerr << "incr max age : " << maxAge << endl;}
+    res      getRes() const { return fRes; }  ///< return the resolution of the signal (fixed)
     
     void setCode(Tree code) { fCode = code; }  ///< returns the interval (min dn max values) of a signal
     Tree getCode() { return fCode; }           ///< returns the interval (min dn max values) of a signal
@@ -217,9 +232,9 @@ inline interval mergeinterval(const vector<Type>& v)
     }
 }
 
-AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i);
-AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i, const res& lsb);
-//didn't use a default arg, would have created a cyclic dependancy with global.hh
+AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i, uint minA=0, uint maxA=0);
+AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i, uint minA, uint maxA, const res& lsb);
+// didn't use a default arg, would have created a cyclic dependancy with global.hh
 
 AudioType* makeTableType(const Type& ct);
 AudioType* makeTableType(const Type& ct, int n, int v, int c, int vec);
@@ -236,7 +251,8 @@ AudioType* makeTupletType(const vector<Type>& vt, int n, int v, int c, int vec, 
  */
 class SimpleType : public AudioType {
    public:
-    SimpleType(int n, int v, int c, int vec, int b, const interval& i, const res& lsb) : AudioType(n, v, c, vec, b, i, lsb)
+    SimpleType(int n, int v, int c, int vec, int b, const interval& i, uint minA, uint maxA, const res& lsb)
+        : AudioType(n, v, c, vec, b, i, minA, maxA, lsb)
     {
         // cerr << "new simple type " << i << " -> " << *this << endl;
     }  ///< constructs a SimpleType from a nature a variability and a computability
@@ -276,42 +292,48 @@ class SimpleType : public AudioType {
 inline Type intCast(Type t)
 {
     return makeSimpleType(kInt, t->variability(), t->computability(), t->vectorability(), t->boolean(),
-                          t->getInterval());
+                          t->getInterval(), t->getMinAge(), t->getMaxAge());
 }
 inline Type floatCast(Type t)
 {
     return makeSimpleType(kReal, t->variability(), t->computability(), t->vectorability(), t->boolean(),
-                          t->getInterval());
+                          t->getInterval(), t->getMinAge(), t->getMaxAge());
 }
 inline Type sampCast(Type t)
 {
-    return makeSimpleType(t->nature(), kSamp, t->computability(), t->vectorability(), t->boolean(), t->getInterval());
+    return makeSimpleType(t->nature(), kSamp, t->computability(), t->vectorability(), t->boolean(), t->getInterval(),
+                          t->getMinAge(), t->getMaxAge());
 }
 inline Type boolCast(Type t)
 {
-    return makeSimpleType(kInt, t->variability(), t->computability(), t->vectorability(), kBool, t->getInterval());
+    return makeSimpleType(kInt, t->variability(), t->computability(), t->vectorability(), kBool, t->getInterval(),
+                          t->getMinAge(), t->getMaxAge());
 }
 inline Type numCast(Type t)
 {
-    return makeSimpleType(t->nature(), t->variability(), t->computability(), t->vectorability(), kNum,
-                          t->getInterval());
+    return makeSimpleType(t->nature(), t->variability(), t->computability(), t->vectorability(), kNum, t->getInterval(),
+                          t->getMinAge(), t->getMaxAge());
 }
 inline Type vecCast(Type t)
 {
-    return makeSimpleType(t->nature(), t->variability(), t->computability(), kVect, t->boolean(), t->getInterval());
+    return makeSimpleType(t->nature(), t->variability(), t->computability(), kVect, t->boolean(), t->getInterval(),
+                          t->getMinAge(), t->getMaxAge());
 }
 inline Type scalCast(Type t)
 {
-    return makeSimpleType(t->nature(), t->variability(), t->computability(), kScal, t->boolean(), t->getInterval());
+    return makeSimpleType(t->nature(), t->variability(), t->computability(), kScal, t->boolean(), t->getInterval(),
+                          t->getMinAge(), t->getMaxAge());
 }
 inline Type truescalCast(Type t)
 {
-    return makeSimpleType(t->nature(), t->variability(), t->computability(), kTrueScal, t->boolean(), t->getInterval());
+    return makeSimpleType(t->nature(), t->variability(), t->computability(), kTrueScal, t->boolean(), t->getInterval(),
+                          t->getMinAge(), t->getMaxAge());
 }
 
 inline Type castInterval(Type t, const interval& i)
 {
-    return makeSimpleType(t->nature(), t->variability(), t->computability(), t->vectorability(), t->boolean(), i);
+    return makeSimpleType(t->nature(), t->variability(), t->computability(), t->vectorability(), t->boolean(), i,
+                          t->getMinAge(), t->getMaxAge());
 }
 
 /**

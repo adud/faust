@@ -74,7 +74,7 @@ ostream& operator<<(ostream& dst, const TupletType& t)
 ostream& SimpleType::print(ostream& dst) const
 {
     return dst << "NR"[nature()] << "KB?S"[variability()] << "CI?E"[computability()] << "VS?TS"[vectorability()]
-               << "N?B"[boolean()] << " " << fInterval;
+         << "N?B"[boolean()] << " " << fInterval << " aged " << minAge << ", " << maxAge ;
 }
 
 /**
@@ -372,13 +372,13 @@ static Tree codeSimpleType(SimpleType* st)
     return CTree::make(gGlobal->SIMPLETYPE, elems);
 }
 
-AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i){
-    return makeSimpleType(n, v, c, vec, b, i, gGlobal->RES);
+AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i, uint minA, uint maxA){
+    return makeSimpleType(n, v, c, vec, b, i, minA, maxA, gGlobal->RES);
 }
 
-AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i, const res& lsb)
+AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i, uint minA, uint maxA, const res& lsb)
 {
-    SimpleType prototype(n, v, c, vec, b, i, lsb);
+    SimpleType prototype(n, v, c, vec, b, i, minA, maxA, lsb);
     Tree       code = codeAudioType(&prototype);
 
     AudioType* t;
@@ -386,7 +386,7 @@ AudioType* makeSimpleType(int n, int v, int c, int vec, int b, const interval& i
         return t;
     } else {
         gGlobal->gAllocationCount++;
-        t = new SimpleType(n, v, c, vec, b, i, lsb);
+        t = new SimpleType(n, v, c, vec, b, i, minA, maxA, lsb);
         gGlobal->gMemoizedTypes->set(code, t);
         t->setCode(code);
         return t;

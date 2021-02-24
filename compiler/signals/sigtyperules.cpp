@@ -62,11 +62,12 @@ static Type infereWaveformType(Tree lv, Tree env);
 static interval arithmetic(int opcode, const interval& x, const interval& y);
 
 // Uncomment to activate type inferrence tracing
-//#define TRACE(x) x
-#define TRACE(x) \
-    {            \
-        ;        \
-    }
+#define TRACE(x) x
+/* #define TRACE(x) \
+     {            \
+         ;        \
+     }
+*/
 
 /**
  * The empty type environment (also property key for closed term type)
@@ -83,11 +84,17 @@ void typeAnnotation(Tree sig, bool causality)
     gGlobal->gCausality = causality;
     Tree sl             = symlist(sig);
     int  n              = len(sl);
-
+    
     vector<Tree> vrec, vdef;
     vector<Type> vtype;
 
-    // cerr << "Symlist " << *sl << endl;
+    Type oldT;
+    Type newT;
+    
+    interval oldI;
+    interval newI;
+    
+    cerr << "Symlist " << *sl << endl;
     for (Tree l = sl; isList(l); l = tl(l)) {
         Tree id, body;
         faustassert(isRec(hd(l), id, body));
@@ -107,7 +114,7 @@ void typeAnnotation(Tree sig, bool causality)
     faustassert(int(vdef.size()) == n);
     faustassert(int(vtype.size()) == n);
 
-    // cerr << "find least fixpoint" << endl;
+    cerr << "find least fixpoint" << endl;
     for (bool finished = false; !finished;) {
         // init recursive types
         CTree::startNewVisit();
@@ -124,11 +131,29 @@ void typeAnnotation(Tree sig, bool causality)
         // check finished
         finished = true;
         for (int i = 0; i < n; i++) {
-            // cerr << i << "-" << *vrec[i] << ":" << *getSigType(vrec[i]) << " => " << *vtype[i] << endl;
-            finished = finished && (getSigType(vrec[i]) == vtype[i]);
+            cerr << i << "-" << *vrec[i] << ":" << *getSigType(vrec[i]) << " => " << *vtype[i] << endl;
+            newT = vtype[i];
+            oldT = getSigType(vrec[i]);
+            if (oldT != newT) {
+                finished = false;
+                // implements interval widening : if its interval has been changed too much
+                // then expand to infinity
+                oldI = oldT->getInterval();
+                newI = newT->getInterval();
+                if(oldI.lo != newI.lo)
+                    newT->incrMinAge();
+                if(oldI.hi != newI.hi){
+                    newT->incrMaxAge();
+                }
+                cerr << newT << endl;
+                if(newT->getMinAge() >= gGlobal->AGE_LIMIT)
+                    newT = castInterval(newT, interval( -HUGE_VAL, newI.hi));
+                if(newT->getMaxAge() >= gGlobal->AGE_LIMIT)
+                    newT = castInterval(newT, interval(newI.lo, HUGE_VAL));
+                cerr << newT << endl;
+            }
         }
     }
-
     // type full term
     T(sig, gGlobal->NULLTYPEENV);
 }

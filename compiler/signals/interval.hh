@@ -101,7 +101,7 @@ inline ostream& operator<<(ostream& dst, const interval& i)
     if (i.valid) {
         return dst << "[" << i.lo << ", " << i.hi << "]";
     } else {
-        return dst << "[-inf; +inf]";
+        return dst << "[???]";
     }
 }
 

@@ -487,11 +487,13 @@ void global::init()
     TGUI01   = makeSimpleType(kReal, kBlock, kExec, kVect, kNum, interval(0, 1));
     INT_TGUI = makeSimpleType(kInt, kBlock, kExec, kVect, kNum, interval());
 
-    TREC = makeSimpleType(kInt, kSamp, kInit, kScal, kNum, interval());
+    TREC = makeSimpleType(kInt, kSamp, kInit, kScal, kNum, interval(0,0));
 
     // empty Predefined bit depth
 
     RES = res();
+
+    AGE_LIMIT = 5;
     
     // Predefined symbols CONS and NIL
     CONS = symbol("cons");
