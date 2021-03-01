@@ -54,6 +54,12 @@ void typeAnnotation(Tree sig, bool causality);
 ::Type getCertifiedSigType(Tree term);
 
 /**
+ *	Return the type of a previously annotated signal term
+ *      only for recursive signals
+ */
+::TupletType* getCertifiedRecSigType(Tree term);
+
+/**
  *	print annotation statistics
  */
 void annotationStatistics();

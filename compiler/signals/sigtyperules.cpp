@@ -41,7 +41,7 @@
 
 static void setSigType(Tree sig, Type t);
 static Type getSigType(Tree sig);
-static Type initialRecType(Tree t);
+static TupletType* initialRecType(Tree t);
 
 static Type T(Tree term, Tree env);
 
@@ -85,7 +85,7 @@ void typeAnnotation(Tree sig, bool causality)
     int  n              = len(sl);
 
     vector<Tree> vrec, vdef;
-    vector<Type> vtype;
+    vector<TupletType*> vtype;
 
     vector<vector<uint>> vAgeMin; ///< age of the minimum of every subsignal of the recursive signal
     vector<vector<uint>> vAgeMax; ///< age of the maximum of every subsignal of the recursive signal
@@ -93,10 +93,10 @@ void typeAnnotation(Tree sig, bool causality)
     // to move into compiler option (set to 0 to disable recursive interval computation)
     const uint AGE_LIMIT = 1;
     
-    Type oldType;
-
     interval newI;
     interval oldI;
+
+    Type oldType;
     
     // cerr << "Symlist " << *sl << endl;
     for (Tree l = sl; isList(l); l = tl(l)) {
@@ -134,16 +134,17 @@ void typeAnnotation(Tree sig, bool causality)
 
         // compute recursive types
         for (int i = 0; i < n; i++) {
-            vtype[i] = T(vdef[i], gGlobal->NULLTYPEENV);
+            vtype[i] = getCertifiedRecSigType(vdef[i]);
         }
 
         // check finished
         finished = true;
         for (int i = 0; i < n; i++) {
             cerr << i << "-" << *vrec[i] << ":" << *getSigType(vrec[i]) << " => " << *vtype[i] << endl;
-            if(vtype[i] != oldType){
+            if(vtype[i] != getCertifiedRecSigType(vrec[i])){
                 finished = false;
                 for(int j=0; j < vdef[i]->arity(); j++){
+                    oldType = getSigType(vdef[i]);
                     if(newI.lo != oldI.lo){
                         //faustassert(newI.lo < oldI.lo);
                         vAgeMin[i][j]++;
@@ -188,6 +189,22 @@ void annotationStatistics()
     Type ty = getSigType(sig);
     faustassert(ty);
     return ty;
+}
+
+::TupletType* getCertifiedRecSigType(Tree sig){
+{
+    Tree Tr;
+    faustassert(isRec(sig, Tr));
+    TupletType* ty = (TupletType*)sig->getType();   
+    if (ty == 0) {
+        TRACE(cerr << gGlobal->TABBER << "GET FIX TYPE OF " << *sig << " HAS NO TYPE YET" << endl;)
+    } else {
+        TRACE(cerr << gGlobal->TABBER << "GET FIX TYPE OF " << *sig << " IS TYPE " << *ty << endl;)
+    }
+    faustassert(ty);
+    return ty;
+}
+
 }
 
 /***********************************************
@@ -634,7 +651,7 @@ static Type infereDocAccessTblType(Type tbl, Type ridx)
  * Compute an initial type solution for a recursive block
  * E1,E2,...En -> TREC,TREC,...TREC
  */
-static Type initialRecType(Tree t)
+static TupletType* initialRecType(Tree t)
 {
     faustassert(isList(t));
 
