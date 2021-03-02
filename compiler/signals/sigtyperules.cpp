@@ -84,8 +84,9 @@ void typeAnnotation(Tree sig, bool causality)
     Tree sl             = symlist(sig);
     int  n              = len(sl);
 
-    vector<Tree> vrec, vdef;
-    vector<TupletType*> vtype;
+    vector<Tree> vrec; ///< array of all the recursive signal groups
+    vector<Tree> vdef; ///< definitions of all the recursive signal groups (vector of lists)
+    vector<Type> vtype; ///< type of the recursive signals
 
     vector<vector<uint>> vAgeMin; ///< age of the minimum of every subsignal of the recursive signal
     vector<vector<uint>> vAgeMax; ///< age of the maximum of every subsignal of the recursive signal
@@ -136,7 +137,7 @@ void typeAnnotation(Tree sig, bool causality)
         for (int i = 0; i < n; i++) {
             vtype[i] = getCertifiedRecSigType(vdef[i]);
         }
-
+ 
         // check finished
         finished = true;
         for (int i = 0; i < n; i++) {
